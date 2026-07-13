@@ -30,7 +30,7 @@ Quiet Pointer lives in your menu bar. One hotkey (`⌃⌥P`) swaps the system cu
 
 ## Features
 
-**Current release:** version **1.0.0**, build **1** — see [CHANGELOG](CHANGELOG.md) for per-build notes
+**Current release:** version **1.1.0**, build **2** — see [CHANGELOG](CHANGELOG.md) for per-build notes
 
 ### The hand
 
@@ -49,9 +49,11 @@ Quiet Pointer lives in your menu bar. One hotkey (`⌃⌥P`) swaps the system cu
 ### Customization
 
 - **Glove color** — Classic white, Orange, Red, Green, Blue, Purple, Yellow
+- **Hand size** — slider in Preferences, from subtle to billboard
 - **Shadow length** — slider from short to long
 - **Expressiveness slider** — right in the menu bar menu, no need to open Preferences
 - **Global hotkey** — default `⌃⌥P`, remappable in Preferences; works even when Quiet Pointer isn't focused
+- **Launch at login** — optional, one toggle in Preferences; the hand also restores its last on/off state on relaunch
 
 ### Native macOS feel
 
@@ -196,7 +198,7 @@ None. Quiet Pointer needs **no Accessibility, no Input Monitoring, and no networ
 | Requirement | Implementation |
 |---|---|
 | Cursor replacement | One borderless, transparent, click-through `NSWindow` per display, above the shielding-window level, draws the hand and hides the real cursor with `CGDisplayHideCursor` |
-| Follows the mouse | Global + local `NSEvent` monitors move the hand to the display under the cursor and pin the fingertip to `NSEvent.mouseLocation` on every move/drag |
+| Follows the mouse | Mouse events wake a per-display `CADisplayLink`; each frame pins the fingertip to `NSEvent.mouseLocation`, so movement is frame-synced (high-rate mice coalesce to one update per refresh) and the link pauses when the mouse is idle |
 | Click poke | Mouse-down monitors trigger a `CAKeyframeAnimation` jab (translate + scale + wobble) anchored at the fingertip, plus a `CAShapeLayer` starburst |
 | Speed reactivity | `ClickMonitor` keeps a sliding window of recent click timestamps and scales the animation up to 3× |
 | Global hotkey | Carbon `RegisterEventHotKey` — works unfocused, no Accessibility permission needed |
@@ -286,7 +288,7 @@ Yes. One overlay per display, rebuilt automatically when you plug or unplug moni
 Drag the **Shy finger ⟷ In your face** slider in the menu bar menu, or pick a mode in Preferences. You can also disable **Animate on click** entirely.
 
 **Does it slow my Mac down?**
-No. The overlay redraws only on mouse movement and clicks. CPU stays negligible when the hand is idle, and zero when it's hidden.
+No. Movement is display-link driven — at most one update per screen refresh, no matter how fast your mouse reports — and the link pauses about a second after the mouse stops. CPU is 0 % while the hand is idle, and zero when it's hidden.
 
 **How do I quit?**
 Click the menu bar icon → **Quit**.

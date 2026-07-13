@@ -36,17 +36,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         prefs.$hotKey
             .dropFirst()
-            .sink { HotKeyManager.shared.register($0) }
+            .sink { [weak self] combo in
+                HotKeyManager.shared.register(combo)
+                if let self, let item = self.toggleItem {
+                    self.applyHotKeyEquivalent(to: item)   // keep the menu in sync
+                }
+            }
             .store(in: &cancellables)
 
         prefs.$mode
             .receive(on: RunLoop.main)
             .sink { [weak self] m in self?.intensitySlider?.integerValue = m.rawValue }
             .store(in: &cancellables)
+
+        // Restore the hand if it was showing when the app last quit (also what
+        // makes launch-at-login pick up right where the user left off).
+        if prefs.lastEnabled {
+            cursor.enable()
+        }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        cursor.disable()
+        cursor.shutdown()           // keep lastEnabled as the user set it
         HotKeyManager.shared.unregister()
     }
 
@@ -67,7 +78,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                                 accessibilityDescription: "Quiet Pointer") {
             return symbol
         }
-        return HandCursorRenderer.image(handHeight: 18, drawArm: false)
+        return HandCursorRenderer.image(handHeight: 18, drawArm: false, dropShadow: false)
     }
 
     // MARK: - Menu
@@ -214,18 +225,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// Displays the configured hotkey next to the toggle item (also acts as a
     /// local shortcut while the app is active; the Carbon hotkey covers global).
+    /// Only single printable characters can be shown as a menu key equivalent;
+    /// special keys (Space, arrows, F-keys, …) clear it so the menu never shows
+    /// a wrong shortcut (e.g. "Space" must not become "S").
     private func applyHotKeyEquivalent(to item: NSMenuItem) {
+        item.keyEquivalent = ""
+        item.keyEquivalentModifierMask = []
+
         let combo = prefs.hotKey
-        if let ch = KeyCodeNames.name(for: combo.keyCode).lowercased().first,
-           ch.isLetter || ch.isNumber {
-            item.keyEquivalent = String(ch)
-            var flags: NSEvent.ModifierFlags = []
-            if combo.modifiers & UInt32(controlKey) != 0 { flags.insert(.control) }
-            if combo.modifiers & UInt32(optionKey)  != 0 { flags.insert(.option) }
-            if combo.modifiers & UInt32(shiftKey)   != 0 { flags.insert(.shift) }
-            if combo.modifiers & UInt32(cmdKey)     != 0 { flags.insert(.command) }
-            item.keyEquivalentModifierMask = flags
-        }
+        let name = KeyCodeNames.name(for: combo.keyCode)
+        guard name.count == 1,
+              let ch = name.lowercased().first,
+              ch.isLetter || ch.isNumber else { return }
+
+        item.keyEquivalent = String(ch)
+        var flags: NSEvent.ModifierFlags = []
+        if combo.modifiers & UInt32(controlKey) != 0 { flags.insert(.control) }
+        if combo.modifiers & UInt32(optionKey)  != 0 { flags.insert(.option) }
+        if combo.modifiers & UInt32(shiftKey)   != 0 { flags.insert(.shift) }
+        if combo.modifiers & UInt32(cmdKey)     != 0 { flags.insert(.command) }
+        item.keyEquivalentModifierMask = flags
     }
 
     // MARK: - Actions
@@ -262,7 +281,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if prefsWindow == nil {
             prefsWindow = PreferencesWindowController.makeWindow()
         }
-        NSApp.activate(ignoringOtherApps: true)
+        NSApp.activate()
         prefsWindow?.makeKeyAndOrderFront(nil)
     }
 

@@ -43,29 +43,45 @@ enum HandCursorRenderer {
     ///   - tint: optional glove fill tint; `nil` keeps it white.
     ///   - drawArm: include the trailing rod (off for the tiny menu-bar glyph).
     ///   - shadowLength: rod length in canvas units (clamped).
+    ///   - dropShadow: bake a soft drop shadow into the artwork. Doing it here
+    ///     (instead of a live `CALayer` shadow) avoids an offscreen render pass
+    ///     on every composite while the hand moves.
     ///   - watermark: text to run up the rod, or `nil` (default none).
     static func image(handHeight: CGFloat = 150,
                       tint: NSColor? = nil,
                       drawArm: Bool = true,
                       shadowLength: CGFloat = defaultShadowLength,
+                      dropShadow: Bool = true,
                       watermark: String? = nil) -> NSImage {
         let scale = handHeight / handHeightUnits
         let size = CGSize(width: canvas.width * scale, height: canvas.height * scale)
 
-        let image = NSImage(size: size)
-        image.isTemplate = false
-        image.lockFocus()
+        // A drawing-handler image re-renders the vectors at whatever backing
+        // scale the destination needs, so the hand is crisp on every display.
+        return NSImage(size: size, flipped: false) { _ in
+            guard let ctx = NSGraphicsContext.current?.cgContext else { return false }
+            ctx.saveGState()
+            ctx.scaleBy(x: scale, y: scale)
 
-        let ctx = NSGraphicsContext.current!.cgContext
-        ctx.saveGState()
-        ctx.scaleBy(x: scale, y: scale)
+            if dropShadow {
+                // CGContext shadow geometry is specified in device space, so
+                // convert the point-space values through the current transform.
+                let dev = ctx.userSpaceToDeviceSpaceTransform
+                let unitsToDevice = (dev.a * dev.a + dev.b * dev.b).squareRoot()
+                let backing = unitsToDevice / max(scale, 0.0001)
+                ctx.setShadow(offset: CGSize(width: 1 * backing, height: -2 * backing),
+                              blur: 5 * backing,
+                              color: NSColor.black.withAlphaComponent(0.28).cgColor)
+                ctx.beginTransparencyLayer(auxiliaryInfo: nil)
+            }
 
-        if drawArm { drawRod(ctx: ctx, length: shadowLength, watermark: watermark) }
-        drawHand(ctx: ctx, tint: tint)
+            if drawArm { drawRod(ctx: ctx, length: shadowLength, watermark: watermark) }
+            drawHand(ctx: ctx, tint: tint)
 
-        ctx.restoreGState()
-        image.unlockFocus()
-        return image
+            if dropShadow { ctx.endTransparencyLayer() }
+            ctx.restoreGState()
+            return true
+        }
     }
 
     // MARK: - Rod (attached to the cuff, cuff-width)

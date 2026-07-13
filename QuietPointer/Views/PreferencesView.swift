@@ -21,6 +21,13 @@ struct PreferencesView: View {
                 }
 
                 Toggle("Animate on click", isOn: $prefs.animateOnClick)
+
+                Picker("Burst style", selection: $prefs.burstDesign) {
+                    ForEach(BurstDesign.allCases, id: \.self) { design in
+                        Text(design.title).tag(design)
+                    }
+                }
+
                 Toggle("Speed-reactive intensity", isOn: $prefs.speedReactive)
             }
 
@@ -35,15 +42,20 @@ struct PreferencesView: View {
                     Text("Yellow").tag("#F5C518")
                 }
 
-                VStack(alignment: .leading, spacing: 2) {
+                Slider(value: $prefs.handHeight, in: Preferences.handHeightRange) {
+                    Text("Hand size")
+                } minimumValueLabel: {
+                    Text("Small").font(.caption)
+                } maximumValueLabel: {
+                    Text("Large").font(.caption)
+                }
+
+                Slider(value: $prefs.shadowScale, in: 0...1) {
                     Text("Shadow length")
-                    Slider(value: $prefs.shadowScale, in: 0...1) {
-                        Text("Shadow length")
-                    } minimumValueLabel: {
-                        Text("Short").font(.caption)
-                    } maximumValueLabel: {
-                        Text("Long").font(.caption)
-                    }
+                } minimumValueLabel: {
+                    Text("Short").font(.caption)
+                } maximumValueLabel: {
+                    Text("Long").font(.caption)
                 }
             }
 
@@ -52,6 +64,10 @@ struct PreferencesView: View {
                 Text("Toggles the hand pointer anywhere, even when Quiet Pointer isn't focused.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+            }
+
+            Section("General") {
+                Toggle("Launch at login", isOn: $prefs.launchAtLogin)
             }
         }
         .formStyle(.grouped)
@@ -82,6 +98,11 @@ struct HotKeyRecorder: View {
     private func start() {
         recording = true
         monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            // Escape cancels recording and keeps the previous shortcut.
+            if event.keyCode == UInt16(kVK_Escape) {
+                stop()
+                return nil
+            }
             let carbonMods = Self.carbonModifiers(from: event.modifierFlags)
             // Require at least one modifier to avoid clobbering plain typing.
             guard carbonMods != 0 else { return event }

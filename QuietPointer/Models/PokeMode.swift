@@ -1,6 +1,19 @@
 import Foundation
 import CoreGraphics
 
+/// The two looks for the rapid-click burst effect.
+enum BurstDesign: Int, CaseIterable, Codable {
+    case comic = 0    // cycling comic shapes (sparkle, spikes, ring, …)
+    case ripple = 1   // single shockwave ring + rays in the glove tint
+
+    var title: String {
+        switch self {
+        case .comic:  return "Comic pop"
+        case .ripple: return "Ripple ring"
+        }
+    }
+}
+
 /// The four expressiveness modes for the click "poke" animation.
 ///
 /// Each mode defines how far the hand jabs, how much it scales up, and how
