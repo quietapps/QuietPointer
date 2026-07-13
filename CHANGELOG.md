@@ -6,6 +6,14 @@ Format: version **X.Y.Z**, build **N** — newest first.
 
 ---
 
+## 1.1.1 — build 3 (2026-07-13)
+
+### Fixed
+
+- **Menu bar icon visibility** — the active state tinted the icon with the accent color, which broke the template rendering and could leave the icon solid black (invisible against dark wallpapers) or washed out. The icon is now always a template image so macOS matches it to the menu bar in light and dark mode, and the active/inactive state is shown by the glyph itself: filled hand when the pointer is showing, outline hand when idle
+
+---
+
 ## 1.1.0 — build 2 (2026-07-13)
 
 Performance and smoothness release.

@@ -66,19 +66,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func setUpStatusItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = statusItem.button {
-            button.image = statusBarIcon()
-            button.image?.isTemplate = true
+            button.image = statusBarIcon(enabled: cursor.isEnabled)
             button.toolTip = "Quiet Pointer"
         }
     }
 
-    /// A small hand glyph for the menu bar. Falls back to an SF Symbol.
-    private func statusBarIcon() -> NSImage {
-        if let symbol = NSImage(systemSymbolName: "hand.point.up.left.fill",
-                                accessibilityDescription: "Quiet Pointer") {
-            return symbol
-        }
-        return HandCursorRenderer.image(handHeight: 18, drawArm: false, dropShadow: false)
+    /// A small hand glyph for the menu bar: filled when the hand is showing,
+    /// outline when idle. Always a template image so macOS tints it to match
+    /// the menu bar in light/dark mode and over any wallpaper.
+    private func statusBarIcon(enabled: Bool) -> NSImage {
+        let name = enabled ? "hand.point.up.left.fill" : "hand.point.up.left"
+        let image = NSImage(systemSymbolName: name,
+                            accessibilityDescription: "Quiet Pointer")
+            ?? HandCursorRenderer.image(handHeight: 18, drawArm: false, dropShadow: false)
+        image.isTemplate = true
+        return image
     }
 
     // MARK: - Menu
@@ -294,7 +296,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         applyHotKeyEquivalent(to: toggleItem)
         if let button = statusItem.button {
             button.appearsDisabled = false
-            button.contentTintColor = enabled ? .controlAccentColor : nil
+            button.contentTintColor = nil          // template image: let macOS pick the color
+            button.image = statusBarIcon(enabled: enabled)
         }
     }
 }
