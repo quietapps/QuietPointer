@@ -6,6 +6,18 @@ Format: version **X.Y.Z**, build **N** — newest first.
 
 ---
 
+## 1.1.3 — build 5 (2026-07-13)
+
+Livelier poke: the faster you click, the wilder the hand.
+
+### Changed
+
+- **Poke motion reworked** — every poke now plays a full gesture: a small anticipation pull-back, a thrust along the finger axis, then a damped bounce settle with a slight twist. The hand no longer swells on click — the motion reads as a stab, not a zoom — and pokes run longer (360–700 ms) so the settle is visible
+- **Click speed escalates the poke** — with *Speed-reactive intensity* on, each rapid click bumps the poke one expressiveness tier wilder, starting from your chosen mode and capping at *In your face* (e.g. from *Gentle nudge*: first click a nudge, second bold, third+ the full 92-pt jab). Your mode is now the starting tier for an isolated click rather than a fixed multiplier base
+- **Click streaks measured click-to-click** — a streak now continues as long as each click lands within 0.8 s of the previous one (previously a fixed 0.7 s window from the newest click, which capped how far steady clicking could build). Bursts keep their v1.1.2 look, sizing, and growth
+
+---
+
 ## 1.1.2 — build 4 (2026-07-13)
 
 Second glove, simpler colors, better shadow, new click motion.

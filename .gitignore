@@ -52,3 +52,5 @@ Carthage/Build/
 # Release artifacts (uploaded to GitHub Releases, not committed)
 QuietPointer-*.zip
 .release-notes-*.md
+
+Design/

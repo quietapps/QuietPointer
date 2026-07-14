@@ -85,17 +85,19 @@ final class HandCursorView: NSView {
     private var burstIndex = 0
 
     /// Runs a poke for a click. Every click taps the hand (jab of the glove +
-    /// shadow); only a run of rapid clicks (count >= 2) also fires a burst,
-    /// which grows with the count.
+    /// shadow); a run of rapid clicks escalates the motion tier (when `grow`
+    /// is on) and, from the second click, also fires a burst that grows with
+    /// the count.
     func poke(count: Int, mode: PokeMode, grow: Bool, design: BurstDesign,
               motion: ClickMotion) {
-        let level = max(0, count - 1)                          // 0 on a single click
-        let sizeScale = grow ? min(1.0 + CGFloat(level) * 0.4, 3.4) : 1.0
+        let tier = grow ? mode.escalated(clicks: count) : mode
         switch motion {                                        // always tap the hand
-        case .poke:  jab(mode: mode, intensity: sizeScale)
-        case .press: press(mode: mode, intensity: sizeScale)
+        case .poke:  jab(tier: tier)
+        case .press: press(tier: tier)
         }
         guard count >= 2 else { return }                       // single click: no burst
+        let level = max(0, count - 1)
+        let sizeScale = grow ? min(1.0 + CGFloat(level) * 0.4, 3.4) : 1.0
         switch design {
         case .comic:
             let style = ComicStyle.allCases[burstIndex % ComicStyle.allCases.count]
@@ -106,31 +108,35 @@ final class HandCursorView: NSView {
         }
     }
 
+    /// Pokey's motion values are tuned against a 150 pt-tall hand; everything
+    /// distance-based scales by this to fit the user's glove size.
+    private var pokeyScale: CGFloat { currentHandHeight / 150.0 }
+
     // MARK: - Jab (whole-hand thrust)
 
     private let bigFactor: CGFloat = 1.3
 
-    private func jab(mode: PokeMode, intensity: CGFloat) {
-        let distance = mode.jabDistance * intensity * bigFactor
-        let scale = 1.0 + (mode.peakScale - 1.0) * intensity * bigFactor
-        let wobble = mode.wobble * intensity
-
-        // Jab travels along the direction the finger points.
+    private func jab(tier: PokeMode) {
+        let s = pokeyScale
         let a = fingerAngle
-        let tx = cos(a) * distance
-        let ty = sin(a) * distance
+        let frames = tier.pokeKeyframes
 
-        var peak = CATransform3DIdentity
-        peak = CATransform3DTranslate(peak, tx, ty, 0)
-        peak = CATransform3DScale(peak, scale, scale, 1)
-        peak = CATransform3DRotate(peak, wobble, 0, 0, 1)
-
+        // Pure travel along the finger axis plus a small twist — the hand
+        // never scales, so the motion reads as a stab, not a swell.
         let anim = CAKeyframeAnimation(keyPath: "transform")
-        anim.values = [CATransform3DIdentity, peak, CATransform3DIdentity]
-        anim.keyTimes = [0, 0.42, 1]
-        anim.timingFunctions = [CAMediaTimingFunction(name: .easeOut),
-                                CAMediaTimingFunction(name: .easeIn)]
-        anim.duration = mode.duration
+        anim.values = frames.map { kf -> CATransform3D in
+            let d = kf.travel * s
+            var t = CATransform3DMakeTranslation(cos(a) * d, sin(a) * d, 0)
+            t = CATransform3DRotate(t, kf.twist * .pi / 180, 0, 0, 1)
+            return t
+        }
+        anim.keyTimes = frames.map { NSNumber(value: $0.time) }
+        if tier == .shy {
+            anim.timingFunctions = Array(
+                repeating: CAMediaTimingFunction(name: .easeOut),
+                count: frames.count - 1)
+        }
+        anim.duration = tier.pokeDuration
         anim.isRemovedOnCompletion = true
 
         handLayer.removeAnimation(forKey: "poke")
@@ -140,9 +146,9 @@ final class HandCursorView: NSView {
     /// The whole hand + shadow recoils down along the shadow's axis (like the
     /// arm being pushed back by the click), then springs back to the clicked
     /// position with a small overshoot.
-    private func press(mode: PokeMode, intensity: CGFloat) {
-        let distance = mode.jabDistance * 2.2 * intensity * bigFactor
-        let wobble = mode.wobble * 0.5 * intensity
+    private func press(tier: PokeMode) {
+        let distance = tier.jabDistance * 2.2 * bigFactor
+        let wobble = tier.wobble * 0.5
 
         // Recoil travels down the shadow's own axis (already a unit vector).
         let dir = HandCursorRenderer.rodDirection(for: currentStyle)
@@ -172,7 +178,7 @@ final class HandCursorView: NSView {
                                 CAMediaTimingFunction(name: .easeIn),
                                 CAMediaTimingFunction(name: .easeOut),
                                 CAMediaTimingFunction(name: .easeIn)]
-        anim.duration = mode.duration * 2.4
+        anim.duration = tier.pressDuration
         anim.isRemovedOnCompletion = true
 
         handLayer.removeAnimation(forKey: "poke")
@@ -209,7 +215,7 @@ final class HandCursorView: NSView {
         // Beneath the hand so the glove is never obscured.
         layer?.insertSublayer(core, below: handLayer)
 
-        let duration = mode.duration + 0.16
+        let duration = mode.burstBaseDuration + 0.16
         animateComic(core, duration: duration)
 
         DispatchQueue.main.asyncAfter(deadline: .now() + duration) {
@@ -347,7 +353,7 @@ final class HandCursorView: NSView {
         let s = scale
         let outer = (46.0 + 26.0 * mode.jabDistance / 12.0) * s * sizeScale
         let color = burstColor
-        let duration = mode.duration + 0.18
+        let duration = mode.burstBaseDuration + 0.18
         let rotation = fingerAngle + CGFloat(burstIndex) * 2.399963
         burstIndex += 1
 
