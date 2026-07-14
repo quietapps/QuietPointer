@@ -30,7 +30,7 @@ Quiet Pointer lives in your menu bar. One hotkey (`⌃⌥P`) swaps the system cu
 
 ## Features
 
-**Current release:** version **1.1.2**, build **4** — see [CHANGELOG](CHANGELOG.md) for per-build notes
+**Current release:** version **1.1.4**, build **6** — see [CHANGELOG](CHANGELOG.md) for per-build notes
 
 ### The hand
 
@@ -53,7 +53,7 @@ Quiet Pointer lives in your menu bar. One hotkey (`⌃⌥P`) swaps the system cu
 - **Color** — White (soft grey shadow, grey/blue bursts) or Black (dark shadow beam, black bursts); the glove itself is always white
 - **Hand size** — slider in Preferences, from subtle to billboard
 - **Shadow length** — slider from a short stub to a very long beam
-- **Expressiveness slider** — right in the menu bar menu, no need to open Preferences
+- **Expressiveness slider** — the same four-stop slider in the menu bar menu and in Preferences
 - **Global hotkey** — default `⌃⌥P`, remappable in Preferences; works even when Quiet Pointer isn't focused
 - **Launch at login** — optional, one toggle in Preferences; the hand also restores its last on/off state on relaunch
 
@@ -174,10 +174,10 @@ rm -rf ~/Library/Preferences/app.quiet.QuietPointer.plist \
 | Show / hide the hand | Click the menu bar icon → **Show hand**, or press `⌃⌥P` |
 | Poke | Click anything — rapid clicks poke harder |
 | Set expressiveness | Menu bar → drag the **Shy finger ⟷ In your face** slider |
-| Switch hand style | Menu bar → **Hand style**, or Preferences → Appearance |
+| Switch hand style | Menu bar → **Hand style**, or Preferences → Pointer |
 | Change shadow / burst color | Menu bar → **Color** (White / Black) |
-| Change click motion | Preferences → Pointer → **Click motion** (Poke / Press) |
-| Adjust shadow length | Menu bar slider, or Preferences → Appearance |
+| Change click motion | Preferences → Clicks → **Click motion** (Poke / Press) |
+| Adjust shadow length | Menu bar slider, or Preferences → Pointer |
 | Toggle click animation | Menu bar → **Animate on click** |
 | Remap the hotkey | Menu bar → **Preferences…** → Global Hotkey → press new keys |
 | Check for updates | Menu bar → **Check for Updates…** |
@@ -290,7 +290,7 @@ No. The hotkey uses Carbon's `RegisterEventHotKey` and mouse tracking uses globa
 Yes. One overlay per display, rebuilt automatically when you plug or unplug monitors. The hand crosses screens seamlessly.
 
 **The poke is too much (or not enough).**
-Drag the **Shy finger ⟷ In your face** slider in the menu bar menu, or pick a mode in Preferences. You can also disable **Animate on click** entirely.
+Drag the **Shy finger ⟷ In your face** slider in the menu bar menu (or the matching slider in Preferences → Clicks). You can also disable **Animate on click** entirely.
 
 **Does it slow my Mac down?**
 No. Movement is display-link driven — at most one update per screen refresh, no matter how fast your mouse reports — and the link pauses about a second after the mouse stops. CPU is 0 % while the hand is idle, and zero when it's hidden.

@@ -2,7 +2,7 @@ import SwiftUI
 import Carbon.HIToolbox
 
 /// The preferences window content. Mirrors the menu options and adds a
-/// configurable global hotkey recorder.
+/// configurable global hotkey recorder, reset, and an about footer.
 struct PreferencesView: View {
     @ObservedObject private var prefs = Preferences.shared
     @ObservedObject private var cursor = CursorManager.shared
@@ -14,41 +14,19 @@ struct PreferencesView: View {
                     get: { cursor.isEnabled },
                     set: { $0 ? cursor.enable() : cursor.disable() }))
 
-                Picker("Expressiveness", selection: $prefs.mode) {
-                    ForEach(PokeMode.allCases, id: \.self) { mode in
-                        Text(mode.title).tag(mode)
-                    }
-                }
-
-                Toggle("Animate on click", isOn: $prefs.animateOnClick)
-
-                Picker("Click motion", selection: $prefs.clickMotion) {
-                    ForEach(ClickMotion.allCases, id: \.self) { motion in
-                        Text(motion.title).tag(motion)
-                    }
-                }
-
-                Picker("Burst style", selection: $prefs.burstDesign) {
-                    ForEach(BurstDesign.allCases, id: \.self) { design in
-                        Text(design.title).tag(design)
-                    }
-                }
-
-                Toggle("Speed-reactive intensity", isOn: $prefs.speedReactive)
-            }
-
-            Section("Appearance") {
                 Picker("Hand style", selection: $prefs.handStyle) {
                     ForEach(HandStyle.allCases, id: \.self) { style in
                         Text(style.title).tag(style)
                     }
                 }
+                .pickerStyle(.segmented)
 
-                Picker("Color", selection: $prefs.pointerColor) {
+                Picker("Ink color", selection: $prefs.pointerColor) {
                     ForEach(PointerColor.allCases, id: \.self) { color in
                         Text(color.title).tag(color)
                     }
                 }
+                .pickerStyle(.segmented)
 
                 Slider(value: $prefs.handHeight, in: Preferences.handHeightRange) {
                     Text("Hand size")
@@ -67,6 +45,49 @@ struct PreferencesView: View {
                 }
             }
 
+            Section("Clicks") {
+                Toggle("Animate on click", isOn: $prefs.animateOnClick)
+
+                Group {
+                    // Four tick stops, one per PokeMode — same scale as the
+                    // menu's intensity slider, same row layout as the size /
+                    // shadow sliders above.
+                    Slider(value: Binding(
+                        get: { Double(prefs.mode.rawValue) },
+                        set: { prefs.mode = PokeMode(rawValue: Int($0.rounded())) ?? .gentle }
+                    ), in: 0...Double(PokeMode.allCases.count - 1), step: 1) {
+                        Text("Expressiveness")
+                    } minimumValueLabel: {
+                        Text(PokeMode.shy.shortTitle).font(.caption)
+                    } maximumValueLabel: {
+                        Text(PokeMode.inYourFace.shortTitle).font(.caption)
+                    }
+
+                    Picker("Click motion", selection: $prefs.clickMotion) {
+                        ForEach(ClickMotion.allCases, id: \.self) { motion in
+                            Text(motion.title).tag(motion)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+
+                    Picker("Burst style", selection: $prefs.burstDesign) {
+                        ForEach(BurstDesign.allCases, id: \.self) { design in
+                            Text(design.title).tag(design)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+
+                    Toggle("Speed-reactive intensity", isOn: $prefs.speedReactive)
+
+                    if prefs.speedReactive {
+                        Text("Rapid clicks get one tier wilder per click, up to \"\(PokeMode.inYourFace.title)\".")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .disabled(!prefs.animateOnClick)
+            }
+
             Section("Global Hotkey") {
                 HotKeyRecorder(combo: $prefs.hotKey)
                 Text("Toggles the hand pointer anywhere, even when Quiet Pointer isn't focused.")
@@ -76,11 +97,58 @@ struct PreferencesView: View {
 
             Section("General") {
                 Toggle("Launch at login", isOn: $prefs.launchAtLogin)
+
+                LabeledContent("Preferences") {
+                    Button("Reset to Defaults") {
+                        prefs.resetToDefaults()
+                    }
+                }
+            }
+
+            Section {
+                AboutFooter()
             }
         }
         .formStyle(.grouped)
         .frame(width: 380)
         .fixedSize(horizontal: false, vertical: true)
+    }
+}
+
+/// App icon, name, version, and project links shown at the bottom of the
+/// preferences window.
+private struct AboutFooter: View {
+    private static let repoURL = URL(string: "https://github.com/quietapps/QuietPointer")!
+
+    private var versionString: String {
+        let info = Bundle.main.infoDictionary
+        let version = info?["CFBundleShortVersionString"] as? String ?? "?"
+        let build = info?["CFBundleVersion"] as? String ?? "?"
+        return "Version \(version) (\(build))"
+    }
+
+    var body: some View {
+        VStack(spacing: 6) {
+            Image(nsImage: NSApp.applicationIconImage)
+                .resizable()
+                .frame(width: 48, height: 48)
+
+            Text("Quiet Pointer")
+                .font(.headline)
+
+            Text(versionString)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .textSelection(.enabled)
+
+            HStack(spacing: 12) {
+                Link("What's New", destination: Self.repoURL.appendingPathComponent("releases"))
+                Link("Report an Issue", destination: Self.repoURL.appendingPathComponent("issues"))
+            }
+            .font(.caption)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 4)
     }
 }
 

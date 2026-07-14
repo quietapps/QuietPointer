@@ -6,6 +6,25 @@ Format: version **X.Y.Z**, build **N** — newest first.
 
 ---
 
+## 1.1.4 — build 6 (2026-07-14)
+
+Preferences window refresh.
+
+### Changed
+
+- **Preferences regrouped** — settings now split into *Pointer* (show toggle, hand style, ink color, hand size, shadow length) and *Clicks* (all click-animation settings), instead of the old Pointer/Appearance mix
+- **Segmented controls** — the two-option choices (Hand style, Ink color, Click motion, Burst style) are now one-click segmented pickers instead of dropdowns
+- **Expressiveness slider** — Preferences now uses the same four-stop slider as the menu bar menu (Shy ⟷ Wild) instead of a dropdown, laid out like the size/shadow sliders
+- **Click settings dim when off** — Expressiveness, Click motion, Burst style, and Speed-reactive intensity gray out while *Animate on click* is disabled
+- **Speed-reactive explained** — a caption under the toggle explains the tier-per-click escalation while it's on
+
+### Added
+
+- **About footer** — app icon, name, and the running version + build at the bottom of Preferences, with *What's New* (releases) and *Report an Issue* links
+- **Reset to Defaults** — one button in Preferences → General restores every visual/behavior setting and the hotkey (launch-at-login and the pointer's on/off state are left alone)
+
+---
+
 ## 1.1.3 — build 5 (2026-07-13)
 
 Livelier poke: the faster you click, the wilder the hand.

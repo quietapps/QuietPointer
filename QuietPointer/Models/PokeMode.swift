@@ -64,6 +64,16 @@ enum PokeMode: Int, CaseIterable, Codable {
         }
     }
 
+    /// Compact rendering for tight UI like slider end labels.
+    var shortTitle: String {
+        switch self {
+        case .shy:        return "Shy"
+        case .gentle:     return "Gentle"
+        case .bold:       return "Bold"
+        case .inYourFace: return "Wild"
+        }
+    }
+
     /// Total duration of one poke, in seconds. Wilder tiers run longer —
     /// the extra time goes into the bounce settle, not a slower stab.
     var pokeDuration: CFTimeInterval {

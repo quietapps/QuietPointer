@@ -118,6 +118,22 @@ final class Preferences: ObservableObject {
         }
     }
 
+    /// Restores every visual/behavior preference to its fresh-install value.
+    /// Leaves `launchAtLogin` alone (a system-level registration) and keeps
+    /// the pointer's current on/off state.
+    func resetToDefaults() {
+        mode = .gentle
+        animateOnClick = true
+        burstDesign = .comic
+        handStyle = .classic
+        clickMotion = .poke
+        speedReactive = true
+        pointerColor = .white
+        shadowScale = 0.6
+        handHeight = Self.defaultHandHeight
+        hotKey = .default
+    }
+
     private init() {
         // `defaults.integer` returns 0 when the key is missing, which is a
         // valid PokeMode — check for presence explicitly so a fresh install
