@@ -45,22 +45,24 @@ final class CursorManager: ObservableObject {
         NSScreen.screens.map(\.backingScaleFactor).max() ?? 2
     }
 
-    /// Re-renders the hand for the current size / tint / shadow length. Safe to
+    /// Re-renders the hand for the current size / color / shadow length. Safe to
     /// call directly from menu actions — the Combine subscriptions below only
     /// fire in the default run-loop mode, which is paused while an NSMenu is open.
     func refreshHand() {
-        handView.rebuild(handHeight: handHeight, tint: prefs.tintColor,
-                         shadowLength: shadowLength, contentsScale: maxBackingScale)
+        handView.rebuild(handHeight: handHeight, color: prefs.pointerColor,
+                         shadowLength: shadowLength, style: prefs.handStyle,
+                         contentsScale: maxBackingScale)
         repositionToCurrentMouse()
     }
 
     private init() {
-        handView.rebuild(handHeight: handHeight, tint: prefs.tintColor,
-                         shadowLength: shadowLength, contentsScale: maxBackingScale)
+        handView.rebuild(handHeight: handHeight, color: prefs.pointerColor,
+                         shadowLength: shadowLength, style: prefs.handStyle,
+                         contentsScale: maxBackingScale)
 
         // Live-update the hand when its appearance preferences change (covers
         // the Preferences window; menu actions call refreshHand() directly).
-        prefs.$tintHex
+        prefs.$pointerColor
             .removeDuplicates()
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in self?.refreshHand() }
@@ -73,6 +75,12 @@ final class CursorManager: ObservableObject {
             .store(in: &cancellables)
 
         prefs.$handHeight
+            .removeDuplicates()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in self?.refreshHand() }
+            .store(in: &cancellables)
+
+        prefs.$handStyle
             .removeDuplicates()
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in self?.refreshHand() }
@@ -252,7 +260,7 @@ final class CursorManager: ObservableObject {
         // Every click taps the hand; only rapid repeat clicks add the burst.
         let count = clicks.registerClickAndCount()
         handView.poke(count: count, mode: prefs.mode, grow: prefs.speedReactive,
-                      design: prefs.burstDesign)
+                      design: prefs.burstDesign, motion: prefs.clickMotion)
     }
 
     // MARK: - Multi-monitor

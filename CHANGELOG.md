@@ -6,6 +6,27 @@ Format: version **X.Y.Z**, build **N** — newest first.
 
 ---
 
+## 1.1.2 — build 4 (2026-07-13)
+
+Second glove, simpler colors, better shadow, new click motion.
+
+### Added
+
+- **Hand style** — Preferences → Appearance → Hand style (also in the menu bar menu): *Classic glove* (the original upright pointer) or *Comic glove*, a new diagonal "mouse cursor" glove with a striped cuff, traced as vector paths so it stays crisp at any size. The comic glove's shadow beam continues straight along the arm's own axis
+- **Click motion** — Preferences → Pointer → Click motion: *Poke* (the original forward jab + swell) or *Press*, where the whole hand + shadow recoils down along the shadow's axis and bounces back like a ball against the clicked point — the fingertip never travels past the click while settling
+
+### Changed
+
+- **Color replaces glove tints** — the seven glove color options are gone; the glove is always white. A new two-option *Color* setting (White / Black) drives the shadow beam and burst ink instead: White keeps the soft grey shadow with grey/blue bursts, Black switches to a dark beam and black bursts that read stronger on light desktops
+- **Shadow length range widened** — the slider now spans a much shorter minimum and a much longer maximum (80–900 canvas units, previously 150–620), and the drawing canvas grew so the longest shadow never clips
+- **Comic glove shadow shape** — constant-width beam (narrower than the flared cuff, exiting the wrist) that only ends in a fade, instead of tapering
+
+### Fixed
+
+- **Release packaging** — the 1.1.1 zip was rebuilt and re-uploaded shortly after release: the original asset came from a stale incremental build and did not actually contain the menu bar icon fix. Release builds are now always produced from a clean build and verified against the binary's symbols before upload
+
+---
+
 ## 1.1.1 — build 3 (2026-07-13)
 
 ### Fixed

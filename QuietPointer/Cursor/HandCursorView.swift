@@ -9,28 +9,30 @@ final class HandCursorView: NSView {
 
     private let handLayer = CALayer()
     private var currentHandHeight: CGFloat = 150
-    private var currentTint: NSColor?
+    private var currentColor: PointerColor = .white
     private var currentShadow: CGFloat = HandCursorRenderer.defaultShadowLength
     private var currentContentsScale: CGFloat = 2
+    private var currentStyle: HandStyle = .classic
 
     /// Output scale = requested hand height / the glove's canvas-unit height.
     private var scale: CGFloat { currentHandHeight / HandCursorRenderer.handHeightUnits }
 
+    private var canvas: CGSize { HandCursorRenderer.canvas(for: currentStyle) }
+    private var fingertip: CGPoint { HandCursorRenderer.fingertip(for: currentStyle) }
+    private var fingerAngle: CGFloat { HandCursorRenderer.fingerAngle(for: currentStyle) }
+
     /// Fingertip as a fraction of the canvas — used as the layer anchor point.
     private var anchorFraction: CGPoint {
-        CGPoint(x: HandCursorRenderer.fingertip.x / HandCursorRenderer.canvas.width,
-                y: HandCursorRenderer.fingertip.y / HandCursorRenderer.canvas.height)
+        CGPoint(x: fingertip.x / canvas.width, y: fingertip.y / canvas.height)
     }
 
     /// The fingertip offset (from the view's bottom-left) at the current size.
     var hotspotOffset: CGPoint {
-        CGPoint(x: HandCursorRenderer.fingertip.x * scale,
-                y: HandCursorRenderer.fingertip.y * scale)
+        CGPoint(x: fingertip.x * scale, y: fingertip.y * scale)
     }
 
     var imageSize: CGSize {
-        CGSize(width: HandCursorRenderer.canvas.width * scale,
-               height: HandCursorRenderer.canvas.height * scale)
+        CGSize(width: canvas.width * scale, height: canvas.height * scale)
     }
 
     override init(frame frameRect: NSRect) {
@@ -43,26 +45,28 @@ final class HandCursorView: NSView {
         layer?.addSublayer(handLayer)
         handLayer.actions = ["transform": NSNull(), "contents": NSNull(),
                              "bounds": NSNull(), "position": NSNull()]
-        rebuild(handHeight: currentHandHeight, tint: currentTint,
-                shadowLength: currentShadow, contentsScale: currentContentsScale)
+        rebuild(handHeight: currentHandHeight, color: currentColor,
+                shadowLength: currentShadow, style: currentStyle,
+                contentsScale: currentContentsScale)
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) unused") }
 
-    /// Rebuilds the hand image for a new size / tint / shadow length.
+    /// Rebuilds the hand image for a new size / color / shadow length / style.
     /// `contentsScale` should be the highest backing scale among the connected
     /// displays so the bitmap is Retina-crisp everywhere.
-    func rebuild(handHeight: CGFloat, tint: NSColor?, shadowLength: CGFloat,
-                 contentsScale: CGFloat) {
+    func rebuild(handHeight: CGFloat, color: PointerColor, shadowLength: CGFloat,
+                 style: HandStyle, contentsScale: CGFloat) {
         currentHandHeight = handHeight
-        currentTint = tint
+        currentColor = color
         currentShadow = shadowLength
+        currentStyle = style
         currentContentsScale = max(1, contentsScale)
 
         // The drop shadow is baked into the artwork (see HandCursorRenderer),
         // so the layer composites a plain bitmap — no offscreen shadow pass.
-        let img = HandCursorRenderer.image(handHeight: handHeight, tint: tint,
-                                           shadowLength: shadowLength)
+        let img = HandCursorRenderer.image(style: style, handHeight: handHeight,
+                                           color: color, shadowLength: shadowLength)
         let size = img.size
         frame = NSRect(origin: frame.origin, size: size)
 
@@ -83,10 +87,14 @@ final class HandCursorView: NSView {
     /// Runs a poke for a click. Every click taps the hand (jab of the glove +
     /// shadow); only a run of rapid clicks (count >= 2) also fires a burst,
     /// which grows with the count.
-    func poke(count: Int, mode: PokeMode, grow: Bool, design: BurstDesign) {
+    func poke(count: Int, mode: PokeMode, grow: Bool, design: BurstDesign,
+              motion: ClickMotion) {
         let level = max(0, count - 1)                          // 0 on a single click
         let sizeScale = grow ? min(1.0 + CGFloat(level) * 0.4, 3.4) : 1.0
-        jab(mode: mode, intensity: sizeScale)                  // always tap the hand
+        switch motion {                                        // always tap the hand
+        case .poke:  jab(mode: mode, intensity: sizeScale)
+        case .press: press(mode: mode, intensity: sizeScale)
+        }
         guard count >= 2 else { return }                       // single click: no burst
         switch design {
         case .comic:
@@ -108,7 +116,7 @@ final class HandCursorView: NSView {
         let wobble = mode.wobble * intensity
 
         // Jab travels along the direction the finger points.
-        let a = HandCursorRenderer.fingerAngle
+        let a = fingerAngle
         let tx = cos(a) * distance
         let ty = sin(a) * distance
 
@@ -129,17 +137,65 @@ final class HandCursorView: NSView {
         handLayer.add(anim, forKey: "poke")
     }
 
+    /// The whole hand + shadow recoils down along the shadow's axis (like the
+    /// arm being pushed back by the click), then springs back to the clicked
+    /// position with a small overshoot.
+    private func press(mode: PokeMode, intensity: CGFloat) {
+        let distance = mode.jabDistance * 2.2 * intensity * bigFactor
+        let wobble = mode.wobble * 0.5 * intensity
+
+        // Recoil travels down the shadow's own axis (already a unit vector).
+        let dir = HandCursorRenderer.rodDirection(for: currentStyle)
+        let tx = dir.dx * distance
+        let ty = dir.dy * distance
+
+        var pushed = CATransform3DIdentity
+        pushed = CATransform3DTranslate(pushed, tx, ty, 0)
+        pushed = CATransform3DRotate(pushed, -wobble, 0, 0, 1)
+
+        // Bounce like a dropped ball, but inverted: the clicked point is the
+        // "floor". Down, back up to the click, down smaller, up, tiny dip,
+        // settle — never past the clicked point.
+        func offset(_ f: CGFloat) -> CATransform3D {
+            CATransform3DMakeTranslation(tx * f, ty * f, 0)
+        }
+
+        let anim = CAKeyframeAnimation(keyPath: "transform")
+        anim.values = [CATransform3DIdentity, pushed,
+                       CATransform3DIdentity, offset(0.30),
+                       CATransform3DIdentity, offset(0.10),
+                       CATransform3DIdentity]
+        anim.keyTimes = [0, 0.24, 0.48, 0.66, 0.82, 0.92, 1]
+        anim.timingFunctions = [CAMediaTimingFunction(name: .easeOut),
+                                CAMediaTimingFunction(name: .easeIn),
+                                CAMediaTimingFunction(name: .easeOut),
+                                CAMediaTimingFunction(name: .easeIn),
+                                CAMediaTimingFunction(name: .easeOut),
+                                CAMediaTimingFunction(name: .easeIn)]
+        anim.duration = mode.duration * 2.4
+        anim.isRemovedOnCompletion = true
+
+        handLayer.removeAnimation(forKey: "poke")
+        handLayer.add(anim, forKey: "poke")
+    }
+
     // MARK: - Comic burst (default — cycling impact shapes at the fingertip)
 
     /// The four comic burst shapes cycled through on successive rapid clicks.
     enum ComicStyle: CaseIterable { case sparkle, spikes, comicRing, doubleSparkle }
 
-    /// Grey so it reads on both light and dark backgrounds.
-    private let burstInk = NSColor(white: 0.42, alpha: 1).cgColor
+    /// Follows the pointer color: grey (reads on both light and dark
+    /// backgrounds) for white, near-black for black.
+    private var burstInk: CGColor {
+        switch currentColor {
+        case .white: NSColor(white: 0.42, alpha: 1).cgColor
+        case .black: NSColor(white: 0.08, alpha: 1).cgColor
+        }
+    }
 
     private func comicBurst(style: ComicStyle, mode: PokeMode, sizeScale: CGFloat) {
         let s = scale
-        let base = HandCursorRenderer.fingerAngle
+        let base = fingerAngle
         let outer = (46.0 + 26.0 * mode.jabDistance / 12.0) * s * sizeScale
         let inner = outer * 0.34
         let box = outer * 2.7
@@ -262,20 +318,26 @@ final class HandCursorView: NSView {
         }
     }
 
-    // MARK: - Ripple burst (optional — shockwave ring + rays in the glove tint)
+    // MARK: - Ripple burst (optional — shockwave ring + rays)
 
-    /// Quiet Blue — the brand accent, used when the glove is classic white.
+    /// Quiet Blue — the brand accent, used for the white pointer color.
     private static let quietBlue = NSColor(srgbRed: 30/255, green: 136/255,
                                            blue: 229/255, alpha: 1)
 
     /// Quiet Apps "calm settle" curve — quick to start, decelerates to a stop.
     private static let calmEase = CAMediaTimingFunction(controlPoints: 0.22, 1, 0.36, 1)
 
-    /// One confident color, no outline: the glove tint when set, otherwise the
-    /// brand blue. Deepened slightly toward ink so it reads on light desktops.
+    /// One confident color, no outline. White pointer: the brand blue,
+    /// deepened slightly toward ink so it reads on light desktops. Black
+    /// pointer: straight ink.
     private var burstColor: CGColor {
-        let base = currentTint ?? Self.quietBlue
-        return (base.blended(withFraction: 0.2, of: .black) ?? base).cgColor
+        switch currentColor {
+        case .white:
+            let base = Self.quietBlue
+            return (base.blended(withFraction: 0.2, of: .black) ?? base).cgColor
+        case .black:
+            return NSColor(white: 0.08, alpha: 1).cgColor
+        }
     }
 
     /// A thin shockwave ring expanding from the fingertip while six short rays
@@ -286,7 +348,7 @@ final class HandCursorView: NSView {
         let outer = (46.0 + 26.0 * mode.jabDistance / 12.0) * s * sizeScale
         let color = burstColor
         let duration = mode.duration + 0.18
-        let rotation = HandCursorRenderer.fingerAngle + CGFloat(burstIndex) * 2.399963
+        let rotation = fingerAngle + CGFloat(burstIndex) * 2.399963
         burstIndex += 1
 
         let ringWidth = max(2.5, 4.5 * s * min(sizeScale, 2.0))

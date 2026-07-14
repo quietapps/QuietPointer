@@ -30,11 +30,12 @@ Quiet Pointer lives in your menu bar. One hotkey (`⌃⌥P`) swaps the system cu
 
 ## Features
 
-**Current release:** version **1.1.0**, build **2** — see [CHANGELOG](CHANGELOG.md) for per-build notes
+**Current release:** version **1.1.2**, build **4** — see [CHANGELOG](CHANGELOG.md) for per-build notes
 
 ### The hand
 
-- **System-wide cursor replacement** — a cartoon hand pointer (white glove, index up-left, thumb up) atop a long fading shadow rod floats above every app and follows the mouse pixel-for-pixel; the fingertip is the hotspot
+- **System-wide cursor replacement** — a cartoon hand pointer (white glove) atop a long fading shadow beam floats above every app and follows the mouse pixel-for-pixel; the fingertip is the hotspot
+- **Two hand styles** — *Classic glove* (upright pointer) or *Comic glove* (diagonal "mouse cursor" glove with a striped cuff and a straight shadow beam along the arm's axis)
 - **Replaces the real arrow** — while enabled, the macOS cursor is hidden (`CGDisplayHideCursor`) and the hand stands in; toggling off restores the arrow instantly
 - **Vector-drawn in code** — stays crisp at any size and display scale, no bundled images
 - **Multi-monitor** — one overlay per display, rebuilt automatically when displays change; the hand crosses screens seamlessly
@@ -42,15 +43,16 @@ Quiet Pointer lives in your menu bar. One hotkey (`⌃⌥P`) swaps the system cu
 ### The poke
 
 - **Click "poke" animation** — a single click just moves the pointer; rapid repeat clicks fire a comic burst at the fingertip that cycles through four styles (sparkle → spikes → jagged ring → double-sparkle) and grows with the click count
+- **Two click motions** — *Poke* (forward jab + swell) or *Press* (the hand + shadow recoil down the shadow's axis and bounce back against the clicked point)
 - **Four expressiveness modes** — *Shy finger → Gentle nudge → Bold poke → In your face* — each with its own jab distance, scale, speed, and wobble
 - **Speed-reactive intensity** — rapid clicks ramp the poke up to 3× the base animation
 - **Works everywhere** — clicks are caught with global `NSEvent` monitors, so pokes fire no matter which app is focused
 
 ### Customization
 
-- **Glove color** — Classic white, Orange, Red, Green, Blue, Purple, Yellow
+- **Color** — White (soft grey shadow, grey/blue bursts) or Black (dark shadow beam, black bursts); the glove itself is always white
 - **Hand size** — slider in Preferences, from subtle to billboard
-- **Shadow length** — slider from short to long
+- **Shadow length** — slider from a short stub to a very long beam
 - **Expressiveness slider** — right in the menu bar menu, no need to open Preferences
 - **Global hotkey** — default `⌃⌥P`, remappable in Preferences; works even when Quiet Pointer isn't focused
 - **Launch at login** — optional, one toggle in Preferences; the hand also restores its last on/off state on relaunch
@@ -172,7 +174,9 @@ rm -rf ~/Library/Preferences/app.quiet.QuietPointer.plist \
 | Show / hide the hand | Click the menu bar icon → **Show hand**, or press `⌃⌥P` |
 | Poke | Click anything — rapid clicks poke harder |
 | Set expressiveness | Menu bar → drag the **Shy finger ⟷ In your face** slider |
-| Change glove color | Menu bar → **Pointer color** |
+| Switch hand style | Menu bar → **Hand style**, or Preferences → Appearance |
+| Change shadow / burst color | Menu bar → **Color** (White / Black) |
+| Change click motion | Preferences → Pointer → **Click motion** (Poke / Press) |
 | Adjust shadow length | Menu bar slider, or Preferences → Appearance |
 | Toggle click animation | Menu bar → **Animate on click** |
 | Remap the hotkey | Menu bar → **Preferences…** → Global Hotkey → press new keys |
@@ -245,11 +249,12 @@ QuietPointer/
 │   ├── HotKeyManager.swift        # Carbon global hotkey
 │   └── ClickMonitor.swift         # Click-cadence → intensity
 ├── Models/
-│   ├── PokeMode.swift             # The four expressiveness modes
+│   ├── PokeMode.swift             # Expressiveness modes, click motions, burst designs
+│   ├── HandStyle.swift            # Hand styles + pointer colors
 │   ├── Preferences.swift          # UserDefaults-backed settings
 │   └── KeyCodeNames.swift         # Key-code → display string
 ├── Cursor/
-│   ├── HandCursorRenderer.swift   # Vector hand drawing
+│   ├── HandCursorRenderer.swift   # Vector hand drawing (both glove styles)
 │   ├── HandCursorView.swift       # Hand layer + poke animation
 │   └── CursorOverlayWindow.swift  # Transparent all-display overlay
 └── Views/
@@ -297,7 +302,7 @@ Click the menu bar icon → **Quit**.
 
 Interaction design inspired by [Pokey](https://pokeyapp.com). All code and art here are independent and original — no Pokey assets are used.
 
-The glove pointer is derived from *"MultiTouch-Interface Mouse-theme 1-finger"* by **BenBois** on [openclipart.org](https://openclipart.org/detail/160435/), released into the **public domain**. Its SVG path data is parsed and re-rendered by `HandCursorRenderer`.
+The classic glove pointer is derived from *"MultiTouch-Interface Mouse-theme 1-finger"* by **BenBois** on [openclipart.org](https://openclipart.org/detail/160435/), released into the **public domain**. Its SVG path data is parsed and re-rendered by `HandCursorRenderer`; the comic glove is original traced vector artwork rendered the same way.
 
 ## License
 

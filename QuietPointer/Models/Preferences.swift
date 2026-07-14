@@ -35,12 +35,14 @@ final class Preferences: ObservableObject {
         static let mode = "pokeMode"
         static let animateOnClick = "animateOnClick"
         static let speedReactive = "speedReactive"
-        static let tintHex = "pointerTintHex"
+        static let pointerColor = "pointerColor"
         static let hotKey = "hotKey"
         static let shadowScale = "shadowScale"
         static let handHeight = "handHeight"
         static let lastEnabled = "lastEnabled"
         static let burstDesign = "burstDesign"
+        static let handStyle = "handStyle"
+        static let clickMotion = "clickMotion"
     }
 
     /// Whether the hand was showing when the app last changed it on purpose.
@@ -64,12 +66,20 @@ final class Preferences: ObservableObject {
     @Published var burstDesign: BurstDesign {
         didSet { defaults.set(burstDesign.rawValue, forKey: Key.burstDesign) }
     }
+    /// Which glove artwork the pointer uses (classic upright or comic diagonal).
+    @Published var handStyle: HandStyle {
+        didSet { defaults.set(handStyle.rawValue, forKey: Key.handStyle) }
+    }
+    /// What a click does to the hand (poke forward or press down the shadow).
+    @Published var clickMotion: ClickMotion {
+        didSet { defaults.set(clickMotion.rawValue, forKey: Key.clickMotion) }
+    }
     @Published var speedReactive: Bool {
         didSet { defaults.set(speedReactive, forKey: Key.speedReactive) }
     }
-    /// Glove tint as a hex string ("#RRGGBB"). "clear" keeps the plain white glove.
-    @Published var tintHex: String {
-        didSet { defaults.set(tintHex, forKey: Key.tintHex) }
+    /// Shadow + burst ink (white = soft grey original look, black = dark).
+    @Published var pointerColor: PointerColor {
+        didSet { defaults.set(pointerColor.rawValue, forKey: Key.pointerColor) }
     }
     @Published var hotKey: HotKeyCombo {
         didSet {
@@ -108,10 +118,6 @@ final class Preferences: ObservableObject {
         }
     }
 
-    var tintColor: NSColor? {
-        NSColor(hex: tintHex)
-    }
-
     private init() {
         // `defaults.integer` returns 0 when the key is missing, which is a
         // valid PokeMode — check for presence explicitly so a fresh install
@@ -125,8 +131,13 @@ final class Preferences: ObservableObject {
         self.animateOnClick = defaults.object(forKey: Key.animateOnClick) as? Bool ?? true
         self.burstDesign = BurstDesign(rawValue: defaults.integer(forKey: Key.burstDesign))
             ?? .comic
+        self.handStyle = HandStyle(rawValue: defaults.integer(forKey: Key.handStyle))
+            ?? .classic
+        self.clickMotion = ClickMotion(rawValue: defaults.integer(forKey: Key.clickMotion))
+            ?? .poke
         self.speedReactive = defaults.object(forKey: Key.speedReactive) as? Bool ?? true
-        self.tintHex = defaults.string(forKey: Key.tintHex) ?? "clear"
+        self.pointerColor = PointerColor(rawValue: defaults.integer(forKey: Key.pointerColor))
+            ?? .white
         self.shadowScale = defaults.object(forKey: Key.shadowScale) as? Double ?? 0.6
         let storedHeight = defaults.object(forKey: Key.handHeight) as? Double
             ?? Self.defaultHandHeight
@@ -142,18 +153,3 @@ final class Preferences: ObservableObject {
     }
 }
 
-// MARK: - Color helpers
-
-extension NSColor {
-    /// Parses "#RRGGBB" / "RRGGBB". Returns nil for "clear" or malformed input.
-    convenience init?(hex: String) {
-        var str = hex.trimmingCharacters(in: .whitespaces)
-        if str.lowercased() == "clear" { return nil }
-        if str.hasPrefix("#") { str.removeFirst() }
-        guard str.count == 6, let value = UInt32(str, radix: 16) else { return nil }
-        self.init(srgbRed: CGFloat((value >> 16) & 0xFF) / 255,
-                  green: CGFloat((value >> 8) & 0xFF) / 255,
-                  blue: CGFloat(value & 0xFF) / 255,
-                  alpha: 1)
-    }
-}

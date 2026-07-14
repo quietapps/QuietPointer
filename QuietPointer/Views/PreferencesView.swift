@@ -22,6 +22,12 @@ struct PreferencesView: View {
 
                 Toggle("Animate on click", isOn: $prefs.animateOnClick)
 
+                Picker("Click motion", selection: $prefs.clickMotion) {
+                    ForEach(ClickMotion.allCases, id: \.self) { motion in
+                        Text(motion.title).tag(motion)
+                    }
+                }
+
                 Picker("Burst style", selection: $prefs.burstDesign) {
                     ForEach(BurstDesign.allCases, id: \.self) { design in
                         Text(design.title).tag(design)
@@ -32,14 +38,16 @@ struct PreferencesView: View {
             }
 
             Section("Appearance") {
-                Picker("Glove color", selection: $prefs.tintHex) {
-                    Text("Classic white").tag("clear")
-                    Text("Orange").tag("#F57C1F")
-                    Text("Red").tag("#E23D3D")
-                    Text("Green").tag("#33B25A")
-                    Text("Blue").tag("#2F7CF5")
-                    Text("Purple").tag("#8A4FE0")
-                    Text("Yellow").tag("#F5C518")
+                Picker("Hand style", selection: $prefs.handStyle) {
+                    ForEach(HandStyle.allCases, id: \.self) { style in
+                        Text(style.title).tag(style)
+                    }
+                }
+
+                Picker("Color", selection: $prefs.pointerColor) {
+                    ForEach(PointerColor.allCases, id: \.self) { color in
+                        Text(color.title).tag(color)
+                    }
                 }
 
                 Slider(value: $prefs.handHeight, in: Preferences.handHeightRange) {

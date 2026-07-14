@@ -18,6 +18,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var intensitySlider: NSSlider!
     private var shadowSlider: NSSlider!
     private var colorMenu: NSMenu!
+    private var styleMenu: NSMenu!
 
     private let releasesURL = URL(string: "https://github.com/quietapps/QuietPointer/releases")!
 
@@ -105,8 +106,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         animateItem.state = prefs.animateOnClick ? .on : .off
         menu.addItem(animateItem)
 
-        // Pointer color submenu.
-        let colorItem = NSMenuItem(title: "Pointer color", action: nil, keyEquivalent: "")
+        // Hand style submenu (classic upright / comic diagonal).
+        let styleItem = NSMenuItem(title: "Hand style", action: nil, keyEquivalent: "")
+        styleMenu = buildStyleMenu()
+        styleItem.submenu = styleMenu
+        menu.addItem(styleItem)
+
+        // Color submenu (shadow + burst ink; the glove is always white).
+        let colorItem = NSMenuItem(title: "Color", action: nil, keyEquivalent: "")
         colorMenu = buildColorMenu()
         colorItem.submenu = colorMenu
         menu.addItem(colorItem)
@@ -143,20 +150,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func buildColorMenu() -> NSMenu {
         let menu = NSMenu()
         menu.autoenablesItems = false
-        let options: [(String, String)] = [
-            ("Classic white", "clear"),
-            ("Orange", "#F57C1F"),
-            ("Red", "#E23D3D"),
-            ("Green", "#33B25A"),
-            ("Blue", "#2F7CF5"),
-            ("Purple", "#8A4FE0"),
-            ("Yellow", "#F5C518")
-        ]
-        for (name, hex) in options {
-            let item = NSMenuItem(title: name, action: #selector(pickColor(_:)), keyEquivalent: "")
+        for color in PointerColor.allCases {
+            let item = NSMenuItem(title: color.title, action: #selector(pickColor(_:)),
+                                  keyEquivalent: "")
             item.target = self
-            item.representedObject = hex
-            item.state = (prefs.tintHex.caseInsensitiveCompare(hex) == .orderedSame) ? .on : .off
+            item.representedObject = color.rawValue
+            item.state = (prefs.pointerColor == color) ? .on : .off
+            menu.addItem(item)
+        }
+        return menu
+    }
+
+    private func buildStyleMenu() -> NSMenu {
+        let menu = NSMenu()
+        menu.autoenablesItems = false
+        for style in HandStyle.allCases {
+            let item = NSMenuItem(title: style.title, action: #selector(pickStyle(_:)),
+                                  keyEquivalent: "")
+            item.target = self
+            item.representedObject = style.rawValue
+            item.state = (prefs.handStyle == style) ? .on : .off
             menu.addItem(item)
         }
         return menu
@@ -259,11 +272,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func pickColor(_ sender: NSMenuItem) {
-        guard let hex = sender.representedObject as? String else { return }
-        prefs.tintHex = hex
+        guard let raw = sender.representedObject as? Int,
+              let color = PointerColor(rawValue: raw) else { return }
+        prefs.pointerColor = color
         for item in colorMenu.items {
-            let h = item.representedObject as? String ?? ""
-            item.state = (h.caseInsensitiveCompare(hex) == .orderedSame) ? .on : .off
+            item.state = (item.representedObject as? Int == raw) ? .on : .off
+        }
+        cursor.refreshHand()
+    }
+
+    @objc private func pickStyle(_ sender: NSMenuItem) {
+        guard let raw = sender.representedObject as? Int,
+              let style = HandStyle(rawValue: raw) else { return }
+        prefs.handStyle = style
+        for item in styleMenu.items {
+            item.state = (item.representedObject as? Int == raw) ? .on : .off
         }
         cursor.refreshHand()
     }

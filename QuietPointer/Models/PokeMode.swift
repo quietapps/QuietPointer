@@ -14,6 +14,22 @@ enum BurstDesign: Int, CaseIterable, Codable {
     }
 }
 
+/// The two motions a click can play.
+enum ClickMotion: Int, CaseIterable, Codable {
+    /// Jab forward along the finger and swell in place (the original).
+    case poke = 0
+    /// The whole hand + shadow recoils down along the shadow's axis, then
+    /// springs back to the clicked position.
+    case press = 1
+
+    var title: String {
+        switch self {
+        case .poke:  return "Poke"
+        case .press: return "Press"
+        }
+    }
+}
+
 /// The four expressiveness modes for the click "poke" animation.
 ///
 /// Each mode defines how far the hand jabs, how much it scales up, and how
